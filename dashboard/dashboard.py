@@ -29,7 +29,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --------------------- Sidebar -------------------------
-st.sidebar.image('https://raw.githubusercontent.com/bagusangkasawan/data-analysis/refs/heads/main/dashboard/bikes-sharing.png', use_column_width=True)
+st.sidebar.image('https://raw.githubusercontent.com/ryannugroho/Analisis-Data/refs/heads/main/dashboard/bikes-sharing.png', use_column_width=True)
 st.sidebar.header('🚲 Bike Sharing Dashboard')
 st.sidebar.write("Gunakan dashboard ini untuk menganalisis data penyewaan sepeda berdasarkan kondisi cuaca, waktu, dan tipe pengguna.")
 st.sidebar.markdown("---")
@@ -46,6 +46,20 @@ def load_data():
 
 day, hour = load_data()
 
+# --------------------- Sidebar - Filter Tanggal -------------------------
+st.sidebar.subheader("Filter Tanggal")
+start_date = st.sidebar.date_input("Tanggal Mulai", value=day['dteday'].min().date())
+end_date = st.sidebar.date_input("Tanggal Akhir", value=day['dteday'].max().date())
+
+# Validasi rentang tanggal
+if start_date > end_date:
+    st.sidebar.error("Tanggal mulai harus lebih awal dari tanggal akhir.")
+else:
+    filtered_day = day[(day['dteday'] >= pd.Timestamp(start_date)) & (day['dteday'] <= pd.Timestamp(end_date))]
+    filtered_hour = hour[(hour['dteday'] >= pd.Timestamp(start_date)) & (hour['dteday'] <= pd.Timestamp(end_date))]
+
+    st.sidebar.success(f"Menampilkan data dari {start_date} hingga {end_date}.")
+
 # --------------------- Layout Utama -------------------------
 st.title("🚲 Bike Sharing Data Analysis")
 
@@ -53,7 +67,7 @@ st.title("🚲 Bike Sharing Data Analysis")
 col1, col2 = st.columns([1, 1])
 
 # --------------------- Visualisasi 1: Cuaca -------------------------
-weathersit_count = day.groupby("weathersit")[["casual", "registered"]].sum()
+weathersit_count = filtered_day.groupby("weathersit")[["casual", "registered"]].sum()
 
 with col1:
     st.subheader("Jumlah Penyewaan Berdasarkan Cuaca")
@@ -69,11 +83,11 @@ with col1:
     st.pyplot(fig)
 
 # --------------------- Visualisasi 2: Waktu -------------------------
-hour["hr_group"] = hour.hr.apply(lambda x: "Dini Hari" if x < 6 else 
+filtered_hour["hr_group"] = filtered_hour.hr.apply(lambda x: "Dini Hari" if x < 6 else 
                                            "Pagi" if x < 11 else 
                                            "Siang" if x < 15 else 
                                            "Sore" if x < 18 else "Malam")
-hr_group_count = hour.groupby("hr_group")[['casual', 'registered']].sum()
+hr_group_count = filtered_hour.groupby("hr_group")[['casual', 'registered']].sum()
 
 with col2:
     st.subheader("Jumlah Penyewaan Berdasarkan Waktu")
@@ -96,8 +110,8 @@ def cluster_group(row):
     elif row['weathersit'] == 3:
         return 'Light_Rain_Workday' if row['workingday'] == 1 else 'Light_Rain_Holiday'
 
-day['cluster'] = day.apply(cluster_group, axis=1)
-cluster_counts = day.groupby('cluster')[['registered', 'casual']].sum()
+filtered_day['cluster'] = filtered_day.apply(cluster_group, axis=1)
+cluster_counts = filtered_day.groupby('cluster')[['registered', 'casual']].sum()
 
 st.subheader("Total Penyewaan Berdasarkan Cluster")
 fig, ax = plt.subplots(figsize=(12, 8))
